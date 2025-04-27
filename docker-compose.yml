@@ -1,0 +1,19 @@
+services:
+  rently-gps:
+    image: aorus22/rently-gps:w-redis
+    container_name: rently-gps
+    restart: always
+    ports:
+      - "4040:4040"
+    environment:
+      - REDIS_HOST=redis:6379
+
+  redis:
+    image: redis:7-alpine
+    container_name: rently-redis
+    restart: always
+    volumes:
+      - ./redis-data:/data
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
