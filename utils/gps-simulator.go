@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"encoding/json"
@@ -43,8 +43,8 @@ type Properties struct {
 }
 
 var (
-	mu           sync.Mutex
-	activeTracks = make(map[string]*ActiveTracker)
+	Mu           sync.Mutex
+	ActiveTracks = make(map[string]*ActiveTracker)
 )
 
 var indonesiaPolygons [][][]float64
@@ -62,8 +62,8 @@ func LoadGeoJSON(filename string) error {
 
 	for _, feature := range geo.Features {
 		if feature.Geometry.Type == "MultiPolygon" {
-			for _, multipolygon := range feature.Geometry.Coordinates {
-				indonesiaPolygons = append(indonesiaPolygons, multipolygon...)
+			for _, Multipolygon := range feature.Geometry.Coordinates {
+				indonesiaPolygons = append(indonesiaPolygons, Multipolygon...)
 			}
 		}
 	}
@@ -99,11 +99,11 @@ func pointInMultiPolygon(lat, lon float64, polygons [][][]float64) bool {
 	return false
 }
 
-func startTracker(vehicleID string) {
-	mu.Lock()
-	defer mu.Unlock()
+func StartTracker(vehicleID string) {
+	Mu.Lock()
+	defer Mu.Unlock()
 
-	if _, exists := activeTracks[vehicleID]; exists {
+	if _, exists := ActiveTracks[vehicleID]; exists {
 		return
 	}
 
@@ -111,18 +111,18 @@ func startTracker(vehicleID string) {
 		Done:         make(chan bool),
 		UpdateTicker: time.NewTicker(2 * time.Second),
 	}
-	activeTracks[vehicleID] = tracker
+	ActiveTracks[vehicleID] = tracker
 
-	pos := getPosition(vehicleID)
+	pos := GetPosition(vehicleID)
 	if pos.Latitude == 0 && pos.Longitude == 0 {
-		savePosition(vehicleID, Position{-6.200000, 106.816666, time.Now().Unix()})
+		SavePosition(vehicleID, Position{-6.200000, 106.816666, time.Now().Unix()})
 	}
 
 	go func() {
 		for {
 			select {
 			case <-tracker.UpdateTicker.C:
-				pos := getPosition(vehicleID)
+				pos := GetPosition(vehicleID)
 
 				for {
 					latDelta := (rand.Float64() - 0.5) / 500
@@ -139,30 +139,30 @@ func startTracker(vehicleID string) {
 					}
 				}
 
-				savePosition(vehicleID, pos)
+				SavePosition(vehicleID, pos)
 
 			case <-tracker.Done:
-				log.Printf("[%s] Simulasi dihentikan", vehicleID)
+				log.Printf("[%s] SiMulasi dihentikan", vehicleID)
 				return
 			}
 		}
 	}()
 
-	log.Printf("[%s] Tracker dimulai", vehicleID)
+	log.Printf("[%s] Tracker diMulai", vehicleID)
 }
 
-func stopTracker(vehicleID string) {
-	mu.Lock()
-	defer mu.Unlock()
+func StopTracker(vehicleID string) {
+	Mu.Lock()
+	defer Mu.Unlock()
 
-	tracker, exists := activeTracks[vehicleID]
+	tracker, exists := ActiveTracks[vehicleID]
 	if !exists {
 		return
 	}
 
 	tracker.UpdateTicker.Stop()
 	tracker.Done <- true
-	delete(activeTracks, vehicleID)
+	delete(ActiveTracks, vehicleID)
 
 	log.Printf("[%s] Tracker dihentikan", vehicleID)
 }
